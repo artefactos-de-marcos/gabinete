@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gabinete de Miniaturas</title>
     <style>
+        /* Importar fuente personalizada desde GitHub */
+        @font-face {
+            font-family: 'CaslonAntique';
+            src: url('https://raw.githubusercontent.com/artefactos-de-marcos/gabinete/main/assets/fonts/CaslonAntique.ttf') format('truetype');
+            font-display: swap;
+        }
+
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
         body {
@@ -25,12 +32,104 @@
             z-index: 10;
         }
 
-        /* Pantalla de Selección de Raza */
+        /* --- Pantalla de Presentación (Intro) --- */
+        #intro-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: black;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between; /* Separa título (arriba) y botón (abajo) */
+            padding: 8vh 0 5vh 0;
+            box-sizing: border-box;
+            z-index: 30;
+            overflow: hidden;
+            pointer-events: auto;
+        }
+
+        #intro-video {
+            position: absolute;
+            top: 50%; left: 50%;
+            min-width: 100%; min-height: 100%;
+            width: auto; height: auto;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            object-fit: cover;
+            opacity: 0; 
+            transition: opacity 0.1s ease-in;
+        }
+
+        /* Contenedor Superior (Título) */
+        .intro-top-layer {
+            position: relative;
+            z-index: 6;
+            text-align: center;
+            background: transparent; /* Sin fondo */
+        }
+
+        /* Estilo del Título tipo Warhammer (Dorado, borde rojo, 3D) */
+        #intro-title {
+            font-family: 'CaslonAntique', serif;
+            font-size: 5.5rem;
+            color: #f0d77b; /* Dorado */
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            -webkit-text-stroke: 2px #cc0000;
+            paint-order: stroke fill;
+            text-shadow: 
+                2px 2px 0 #8b0000,
+                4px 4px 0 #800000,
+                5px 5px 0 #600000,
+                6px 6px 8px rgba(0,0,0,0.9);
+        }
+
+        /* Contenedor Inferior (Botón y Crédito) */
+        .intro-bottom-layer {
+            position: relative;
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            background: transparent; /* Sin fondo */
+        }
+
+        #intro-start-btn {
+            font-family: 'CaslonAntique', serif;
+            font-size: 1.4rem;
+            padding: 8px 40px;
+            background: transparent; /* Totalmente transparente */
+            color: #f4e4c1;
+            border: 2px solid #f4e4c1;
+            cursor: pointer;
+            transition: 0.3s all;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 4px black; /* Sombra para que sea legible */
+        }
+
+        #intro-start-btn:hover {
+            background: #f4e4c1;
+            color: #1a1a1a;
+            box-shadow: 0 0 15px #f4e4c1;
+        }
+
+        #intro-credit {
+            font-family: 'CaslonAntique', serif;
+            font-size: 1rem;
+            color: #aaa;
+            text-shadow: 2px 2px 4px black; /* Sombra para legibilidad */
+            margin: 0;
+        }
+
+        /* --- Pantalla de Selección de Raza --- */
         #race-selection {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.85);
-            display: flex;
+            display: none; 
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -38,9 +137,13 @@
         }
 
         #race-selection h1 {
-            font-size: 2rem;
+            font-family: 'CaslonAntique', serif;
+            font-size: 3rem;
             margin-bottom: 40px;
-            text-shadow: 4px 4px 0px #5a0000;
+            color: #f0d77b;
+            -webkit-text-stroke: 1px #cc0000;
+            paint-order: stroke fill;
+            text-shadow: 3px 3px 0 #600000;
         }
 
         .race-grid {
@@ -67,7 +170,7 @@
             transform: scale(1.05);
         }
 
-        /* Interfaz de Construcción */
+        /* --- Interfaz de Construcción --- */
         #builder-ui {
             display: none;
             position: absolute;
@@ -141,10 +244,24 @@
 
     <!-- Interfaz de Usuario -->
     <div id="ui-overlay">
+        
+        <!-- Pantalla de Presentación -->
+        <div id="intro-screen">
+            <video id="intro-video" src="https://raw.githubusercontent.com/artefactos-de-marcos/gabinete/main/assets/intro.mp4" muted playsinline></video>
+            
+            <div class="intro-top-layer">
+                <h1 id="intro-title">Gabinete de miniaturas</h1>
+            </div>
+            
+            <div class="intro-bottom-layer">
+                <button id="intro-start-btn">Empezar</button>
+                <p id="intro-credit">Diseñado por Marcos Alfonzo.</p>
+            </div>
+        </div>
+
         <!-- Selección de Raza -->
         <div id="race-selection">
-            <h1>GABINETE DE MINIATURAS</h1>
-            <p style="font-size: 0.8rem; margin-bottom: 30px; color:#aaa;">Elige tu ejército</p>
+            <h1>Elige tu ejército</h1>
             <div class="race-grid">
                 <button class="race-btn" onclick="startGame('Imperio')">Imperio</button>
                 <button class="race-btn" onclick="startGame('Bretonia')">Bretonia</button>
@@ -207,11 +324,32 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
     <script>
+        // --- Lógica de Presentación ---
+        const introVideo = document.getElementById('intro-video');
+        const introScreen = document.getElementById('intro-screen');
+        const introStartBtn = document.getElementById('intro-start-btn');
+
+        // 1. Inicia el video con la app pero páusalo
+        introVideo.pause();
+        introVideo.currentTime = 0; 
+
+        // 2. Deja que comience luego de dos segundos
+        setTimeout(() => {
+            introVideo.style.opacity = 1;
+            introVideo.play().catch(e => console.error("Error al reproducir el video:", e));
+        }, 2000);
+
+        // Al hacer clic en "Empezar", ocultar la intro y mostrar selección de raza
+        introStartBtn.addEventListener('click', () => {
+            introScreen.style.display = 'none';
+            document.getElementById('race-selection').style.display = 'flex';
+        });
+
         // --- Variables Globales 3D ---
         let scene, camera, renderer, controls;
         let spriteTexture;
         let spriteMaterial;
-        let spritePlanes = []; // Miniaturas en el escritorio
+        let spritePlanes = []; 
 
         // --- Lógica de la App ---
         function startGame(race) {
@@ -239,11 +377,10 @@
 
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.target.set(0, 1, 0);
-            controls.maxPolarAngle = Math.PI / 2.1; // No atravesar el suelo
+            controls.maxPolarAngle = Math.PI / 2.1; 
             controls.minDistance = 3;
             controls.maxDistance = 15;
 
-            // Luces
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
             scene.add(ambientLight);
 
@@ -254,14 +391,12 @@
             scene.add(deskLamp);
             scene.add(deskLamp.target);
 
-            // El Escritorio (Madera)
             const deskGeo = new THREE.BoxGeometry(10, 0.5, 8);
             const deskMat = new THREE.MeshStandardMaterial({ color: 0x5a3a1a });
             const desk = new THREE.Mesh(deskGeo, deskMat);
             desk.position.y = -0.25;
             scene.add(desk);
 
-            // Elementos de Hobby (Pinturas y herramientas)
             const paintColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
             for(let i=0; i<6; i++) {
                 const potGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.4, 8);
@@ -278,7 +413,6 @@
                 scene.add(paint);
             }
 
-            // Tubo de pegamento
             const glueGeo = new THREE.CylinderGeometry(0.15, 0.15, 1, 8);
             const glueMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
             const glue = new THREE.Mesh(glueGeo, glueMat);
@@ -286,13 +420,11 @@
             glue.rotation.z = Math.PI / 2;
             scene.add(glue);
 
-            // Plano para proyectar el Sprite (Lienzo de ensamblaje)
-            // Creamos un Canvas oculto para la textura
             const spriteCanvas = document.createElement('canvas');
             spriteCanvas.width = 256;
             spriteCanvas.height = 256;
             spriteTexture = new THREE.CanvasTexture(spriteCanvas);
-            spriteTexture.magFilter = THREE.NearestFilter; // Mantener pixel art crujiente
+            spriteTexture.magFilter = THREE.NearestFilter; 
             spriteTexture.minFilter = THREE.NearestFilter;
 
             spriteMaterial = new THREE.MeshBasicMaterial({ 
@@ -301,7 +433,6 @@
                 side: THREE.DoubleSide 
             });
 
-            // Crearemos una fila de 3 miniaturas
             for(let i=0; i<3; i++) {
                 const planeGeo = new THREE.PlaneGeometry(2, 2);
                 const plane = new THREE.Mesh(planeGeo, spriteMaterial);
@@ -322,7 +453,6 @@
         function animate() {
             requestAnimationFrame(animate);
             
-            // Hacer que los sprites siempre miren a la cámara (Billboard effect)
             spritePlanes.forEach(plane => {
                 plane.lookAt(camera.position);
             });
@@ -335,13 +465,12 @@
         function updateSprite() {
             const canvas = spriteTexture.image;
             const ctx = canvas.getContext('2d');
-            const resolution = 32; // Resolución tipo retro
+            const resolution = 32; 
             const scale = canvas.width / resolution;
             
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.imageSmoothingEnabled = false;
 
-            // Valores actuales
             const unitType = document.getElementById('unit-type').value;
             const weapon = document.getElementById('weapon-type').value;
             const shield = document.getElementById('shield-type').value;
@@ -352,14 +481,11 @@
             const cSec = document.getElementById('color-secondary').value;
             const cBan = document.getElementById('color-banner').value;
 
-            // Dibujar en una cuadrícula de 32x32
-            // Usamos p (pixel) para abreviar
             function p(x, y, color) {
                 ctx.fillStyle = color;
                 ctx.fillRect(x * scale, y * scale, scale, scale);
             }
 
-            // Función para oscurecer un color (sombreado simple)
             function shade(color, percent) {
                 let R = parseInt(color.substring(1,3),16);
                 let G = parseInt(color.substring(3,5),16);
@@ -367,17 +493,14 @@
                 R = Math.max(0, Math.min(255, R - percent));
                 G = Math.max(0, Math.min(255, G - percent));
                 B = Math.max(0, Math.min(255, B - percent));
-                return "#" + R.toString(16) + G.toString(16) + B.toString(16);
+                return "#" + R.toString(16).padStart(2,'0') + G.toString(16).padStart(2,'0') + B.toString(16).padStart(2,'0');
             }
 
             const cPrimDark = shade(cPrim, 40);
             const cSecDark = shade(cSec, 40);
 
-            // --- Lógica de dibujo del Sprites ---
-            // (Estilo Dominions: cabezas grandes, siluetas reconocibles)
-
-            let baseY = 20; // Nivel del suelo
-            if(unitType === 'caballeria') baseY = 24; // Caballos son más bajos en la base
+            let baseY = 20; 
+            if(unitType === 'caballeria') baseY = 24; 
 
             // Base de la miniatura
             for(let x=10; x<22; x++) p(x, baseY+1, cBase);
@@ -436,15 +559,15 @@
             // --- Armas ---
             if(weapon === 'espada') {
                 for(let y=4; y<14; y++) p(20, y, "#cccccc");
-                p(20, 14, "#8b5a2b"); // Mango
+                p(20, 14, "#8b5a2b"); 
             } else if(weapon === 'lanza') {
                 for(let y=2; y<18; y++) p(21, y, "#8b5a2b");
-                p(21, 1, "#aaaaaa"); p(21, 2, "#aaaaaa"); // Punta
+                p(21, 1, "#aaaaaa"); p(21, 2, "#aaaaaa"); 
             } else if(weapon === 'arco') {
                 for(let y=8; y<18; y++) {
                     p(21, y, "#8b5a2b");
                 }
-                p(20, 8, "#e0e0e0"); p(20, 9, "#e0e0e0"); // Flecha
+                p(20, 8, "#e0e0e0"); p(20, 9, "#e0e0e0"); 
             }
 
             // --- Escudo ---
@@ -460,7 +583,7 @@
 
             // --- Estandarte ---
             if(banner === 'estandarte') {
-                for(let y=2; y<18; y++) p(11, y, "#8b5a2b"); // Mástil
+                for(let y=2; y<18; y++) p(11, y, "#8b5a2b"); 
                 for(let y=3; y<10; y++) {
                     for(let x=7; x<11; x++) p(x, y, (y%2===0) ? cBan : shade(cBan, 30));
                 }
