@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gabinete de Miniaturas</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            font-family: 'Press Start 2P', cursive;
+            color: #e0e0e0;
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Pantalla de Selección de Raza */
+        #race-selection {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+        }
+
+        #race-selection h1 {
+            font-size: 2rem;
+            margin-bottom: 40px;
+            text-shadow: 4px 4px 0px #5a0000;
+        }
+
+        .race-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 800px;
+        }
+
+        .race-btn {
+            background: #2b2b2b;
+            border: 4px solid #555;
+            color: #fff;
+            padding: 20px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .race-btn:hover {
+            background: #4a0000;
+            border-color: #ffcc00;
+            transform: scale(1.05);
+        }
+
+        /* Interfaz de Construcción */
+        #builder-ui {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 250px;
+            height: 100%;
+            background: rgba(20, 20, 20, 0.9);
+            border-right: 4px solid #555;
+            padding: 20px;
+            box-sizing: border-box;
+            pointer-events: auto;
+            overflow-y: auto;
+        }
+
+        .panel-section {
+            margin-bottom: 30px;
+        }
+
+        .panel-title {
+            font-size: 0.7rem;
+            color: #ffcc00;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #555;
+            padding-bottom: 5px;
+        }
+
+        select, button {
+            width: 100%;
+            background: #333;
+            color: #fff;
+            border: 2px solid #777;
+            padding: 10px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.6rem;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .color-picker-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.6rem;
+        }
+
+        input[type="color"] {
+            width: 50px;
+            height: 30px;
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #555; border: 2px solid #1a1a1a; }
+    </style>
+</head>
+<body>
+
+    <!-- Contenedor 3D -->
+    <div id="canvas-container"></div>
+
+    <!-- Interfaz de Usuario -->
+    <div id="ui-overlay">
+        <!-- Selección de Raza -->
+        <div id="race-selection">
+            <h1>GABINETE DE MINIATURAS</h1>
+            <p style="font-size: 0.8rem; margin-bottom: 30px; color:#aaa;">Elige tu ejército</p>
+            <div class="race-grid">
+                <button class="race-btn" onclick="startGame('Imperio')">Imperio</button>
+                <button class="race-btn" onclick="startGame('Bretonia')">Bretonia</button>
+                <button class="race-btn" onclick="startGame('Enanos')">Enanos</button>
+                <button class="race-btn" onclick="startGame('Altos Elfos')">Altos Elfos</button>
+                <button class="race-btn" onclick="startGame('Orcos')">Orcos</button>
+                <button class="race-btn" onclick="startGame('Elfos Silvanos')">Elfos Silvanos</button>
+                <button class="race-btn" onclick="startGame('No Muertos')">No Muertos</button>
+            </div>
+        </div>
+
+        <!-- UI de Construcción -->
+        <div id="builder-ui">
+            <div class="panel-section">
+                <div class="panel-title">RAZA</div>
+                <div id="current-race" style="font-size: 0.8rem; color:#fff;">-</div>
+            </div>
+
+            <div class="panel-section">
+                <div class="panel-title">EQUIPAMIENTO</div>
+                <select id="unit-type" onchange="updateSprite()">
+                    <option value="infanteria">Infantería</option>
+                    <option value="caballeria">Caballería</option>
+                </select>
+                <select id="weapon-type" onchange="updateSprite()">
+                    <option value="espada">Espada</option>
+                    <option value="lanza">Lanza</option>
+                    <option value="arco">Arco</option>
+                </select>
+                <select id="shield-type" onchange="updateSprite()">
+                    <option value="escudo">Escudo</option>
+                    <option value="sin_escudo">Sin Escudo</option>
+                </select>
+                <select id="banner-type" onchange="updateSprite()">
+                    <option value="estandarte">Estandarte</option>
+                    <option value="sin_estandarte">Sin Estandarte</option>
+                </select>
+            </div>
+
+            <div class="panel-section">
+                <div class="panel-title">PINTURA</div>
+                <div class="color-picker-container">
+                    Base <input type="color" id="color-base" value="#4a3018" onchange="updateSprite()">
+                </div>
+                <div class="color-picker-container">
+                    Principal <input type="color" id="color-primary" value="#b0b0b0" onchange="updateSprite()">
+                </div>
+                <div class="color-picker-container">
+                    Secundario <input type="color" id="color-secondary" value="#ff0000" onchange="updateSprite()">
+                </div>
+                <div class="color-picker-container">
+                    Estandarte <input type="color" id="color-banner" value="#ffcc00" onchange="updateSprite()">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Librería Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // --- Variables Globales 3D ---
+        let scene, camera, renderer, controls;
+        let spriteTexture;
+        let spriteMaterial;
+        let spritePlanes = []; // Miniaturas en el escritorio
+
+        // --- Lógica de la App ---
+        function startGame(race) {
+            document.getElementById('race-selection').style.display = 'none';
+            document.getElementById('builder-ui').style.display = 'block';
+            document.getElementById('current-race').innerText = race.toUpperCase();
+            
+            initThree();
+            updateSprite();
+            animate();
+        }
+
+        // --- Configuración Three.js (El Escritorio 3D) ---
+        function initThree() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a1a);
+            scene.fog = new THREE.Fog(0x1a1a1a, 10, 30);
+
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 4, 6);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.target.set(0, 1, 0);
+            controls.maxPolarAngle = Math.PI / 2.1; // No atravesar el suelo
+            controls.minDistance = 3;
+            controls.maxDistance = 15;
+
+            // Luces
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const deskLamp = new THREE.SpotLight(0xffe0b0, 1.5);
+            deskLamp.position.set(0, 8, 2);
+            deskLamp.target.position.set(0, 0, 0);
+            deskLamp.castShadow = true;
+            scene.add(deskLamp);
+            scene.add(deskLamp.target);
+
+            // El Escritorio (Madera)
+            const deskGeo = new THREE.BoxGeometry(10, 0.5, 8);
+            const deskMat = new THREE.MeshStandardMaterial({ color: 0x5a3a1a });
+            const desk = new THREE.Mesh(deskGeo, deskMat);
+            desk.position.y = -0.25;
+            scene.add(desk);
+
+            // Elementos de Hobby (Pinturas y herramientas)
+            const paintColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
+            for(let i=0; i<6; i++) {
+                const potGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.4, 8);
+                const potMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+                const pot = new THREE.Mesh(potGeo, potMat);
+                pot.position.set(-3.5 + (i%3)*0.5, 0.2, 2.5 - Math.floor(i/3)*0.5);
+                scene.add(pot);
+
+                const paintGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.1, 8);
+                const paintMat = new THREE.MeshStandardMaterial({ color: paintColors[i] });
+                const paint = new THREE.Mesh(paintGeo, paintMat);
+                paint.position.copy(pot.position);
+                paint.position.y = 0.45;
+                scene.add(paint);
+            }
+
+            // Tubo de pegamento
+            const glueGeo = new THREE.CylinderGeometry(0.15, 0.15, 1, 8);
+            const glueMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            const glue = new THREE.Mesh(glueGeo, glueMat);
+            glue.position.set(3.5, 0.5, 2.5);
+            glue.rotation.z = Math.PI / 2;
+            scene.add(glue);
+
+            // Plano para proyectar el Sprite (Lienzo de ensamblaje)
+            // Creamos un Canvas oculto para la textura
+            const spriteCanvas = document.createElement('canvas');
+            spriteCanvas.width = 256;
+            spriteCanvas.height = 256;
+            spriteTexture = new THREE.CanvasTexture(spriteCanvas);
+            spriteTexture.magFilter = THREE.NearestFilter; // Mantener pixel art crujiente
+            spriteTexture.minFilter = THREE.NearestFilter;
+
+            spriteMaterial = new THREE.MeshBasicMaterial({ 
+                map: spriteTexture, 
+                transparent: true, 
+                side: THREE.DoubleSide 
+            });
+
+            // Crearemos una fila de 3 miniaturas
+            for(let i=0; i<3; i++) {
+                const planeGeo = new THREE.PlaneGeometry(2, 2);
+                const plane = new THREE.Mesh(planeGeo, spriteMaterial);
+                plane.position.set(-2 + i*2, 1, 0);
+                scene.add(plane);
+                spritePlanes.push(plane);
+            }
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Hacer que los sprites siempre miren a la cámara (Billboard effect)
+            spritePlanes.forEach(plane => {
+                plane.lookAt(camera.position);
+            });
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // --- Motor de Pixel Art 2D ---
+        function updateSprite() {
+            const canvas = spriteTexture.image;
+            const ctx = canvas.getContext('2d');
+            const resolution = 32; // Resolución tipo retro
+            const scale = canvas.width / resolution;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.imageSmoothingEnabled = false;
+
+            // Valores actuales
+            const unitType = document.getElementById('unit-type').value;
+            const weapon = document.getElementById('weapon-type').value;
+            const shield = document.getElementById('shield-type').value;
+            const banner = document.getElementById('banner-type').value;
+            
+            const cBase = document.getElementById('color-base').value;
+            const cPrim = document.getElementById('color-primary').value;
+            const cSec = document.getElementById('color-secondary').value;
+            const cBan = document.getElementById('color-banner').value;
+
+            // Dibujar en una cuadrícula de 32x32
+            // Usamos p (pixel) para abreviar
+            function p(x, y, color) {
+                ctx.fillStyle = color;
+                ctx.fillRect(x * scale, y * scale, scale, scale);
+            }
+
+            // Función para oscurecer un color (sombreado simple)
+            function shade(color, percent) {
+                let R = parseInt(color.substring(1,3),16);
+                let G = parseInt(color.substring(3,5),16);
+                let B = parseInt(color.substring(5,7),16);
+                R = Math.max(0, Math.min(255, R - percent));
+                G = Math.max(0, Math.min(255, G - percent));
+                B = Math.max(0, Math.min(255, B - percent));
+                return "#" + R.toString(16) + G.toString(16) + B.toString(16);
+            }
+
+            const cPrimDark = shade(cPrim, 40);
+            const cSecDark = shade(cSec, 40);
+
+            // --- Lógica de dibujo del Sprites ---
+            // (Estilo Dominions: cabezas grandes, siluetas reconocibles)
+
+            let baseY = 20; // Nivel del suelo
+            if(unitType === 'caballeria') baseY = 24; // Caballos son más bajos en la base
+
+            // Base de la miniatura
+            for(let x=10; x<22; x++) p(x, baseY+1, cBase);
+            for(let x=11; x<21; x++) p(x, baseY+2, shade(cBase, 20));
+
+            if(unitType === 'infanteria') {
+                // Piernas y cuerpo
+                for(let y=14; y<20; y++) {
+                    p(13, y, cPrimDark); p(14, y, cPrim);
+                    p(17, y, cPrim); p(18, y, cPrimDark);
+                }
+                // Torso/Armadura
+                for(let y=10; y<14; y++) {
+                    for(let x=12; x<20; x++) p(x, y, (x%2===0) ? cPrim : cPrimDark);
+                }
+                // Decoración del pecho (Secundario)
+                p(15, 11, cSec); p(16, 11, cSec);
+                p(15, 12, cSecDark); p(16, 12, cSecDark);
+
+                // Cabeza (piel genérica)
+                for(let y=6; y<10; y++) {
+                    for(let x=13; x<18; x++) p(x, y, "#e0ac69");
+                }
+                // Casco
+                for(let y=4; y<7; y++) {
+                    for(let x=12; x<19; x++) p(x, y, (y===4) ? cSec : cSecDark);
+                }
+                p(15, 3, cSec); // Punto del casco
+
+            } else if (unitType === 'caballeria') {
+                // Caballo
+                for(let y=18; y<24; y++) {
+                    for(let x=8; x<24; x++) {
+                        if(y < 23) p(x, y, (x%2===0) ? "#4a3018" : "#3a2410");
+                    }
+                }
+                // Cabeza caballo
+                for(let y=16; y<20; y++) {
+                    p(22, y, "#4a3018"); p(23, y, "#3a2410");
+                }
+                // Jinete (Cuerpo)
+                for(let y=11; y<17; y++) {
+                    for(let x=13; x<19; x++) p(x, y, (x%2===0) ? cPrim : cPrimDark);
+                }
+                // Jinete (Cabeza)
+                 for(let y=7; y<11; y++) {
+                    for(let x=14; x<18; x++) p(x, y, "#e0ac69");
+                }
+                // Casco Jinete
+                for(let y=5; y<8; y++) {
+                    for(let x=13; x<19; x++) p(x, y, cSecDark);
+                }
+                p(15, 4, cSec);
+            }
+
+            // --- Armas ---
+            if(weapon === 'espada') {
+                for(let y=4; y<14; y++) p(20, y, "#cccccc");
+                p(20, 14, "#8b5a2b"); // Mango
+            } else if(weapon === 'lanza') {
+                for(let y=2; y<18; y++) p(21, y, "#8b5a2b");
+                p(21, 1, "#aaaaaa"); p(21, 2, "#aaaaaa"); // Punta
+            } else if(weapon === 'arco') {
+                for(let y=8; y<18; y++) {
+                    p(21, y, "#8b5a2b");
+                }
+                p(20, 8, "#e0e0e0"); p(20, 9, "#e0e0e0"); // Flecha
+            }
+
+            // --- Escudo ---
+            if(shield === 'escudo') {
+                for(let y=11; y<16; y++) {
+                    for(let x=8; x<13; x++) {
+                        if(x > 8 && x < 12 && y > 11 && y < 15) {
+                             p(x, y, (x%2===0) ? cSec : cSecDark);
+                        }
+                    }
+                }
+            }
+
+            // --- Estandarte ---
+            if(banner === 'estandarte') {
+                for(let y=2; y<18; y++) p(11, y, "#8b5a2b"); // Mástil
+                for(let y=3; y<10; y++) {
+                    for(let x=7; x<11; x++) p(x, y, (y%2===0) ? cBan : shade(cBan, 30));
+                }
+            }
+
+            spriteTexture.needsUpdate = true;
+        }
+    </script>
+</body>
+</html>
