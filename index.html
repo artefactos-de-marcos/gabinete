@@ -11,25 +11,25 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'EB Garamond', serif; background: radial-gradient(circle at center, #1a1a1a, #000); }
-#mosaic-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; background-image: url('assets/img/construct.webp'); background-size: cover; background-position: center; background-repeat: no-repeat; }
 
-/* Área de la manta verde — zona de trabajo */
-#green-mat-area { position: fixed; z-index: 1; pointer-events: none; border: 2px dashed rgba(76, 175, 80, 0.35); border-radius: 8px; background: rgba(76, 175, 80, 0.06); box-shadow: inset 0 0 40px rgba(76, 175, 80, 0.08); transition: opacity 0.5s ease; }
-#green-mat-area.hidden { opacity: 0; }
+  #mosaic-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; background-image: url('assets/img/construct.webp'); background-size: cover; background-position: center; background-repeat: no-repeat; }
 
-/* Animación de caída desde arriba */
-@keyframes tileFall {
-  0%   { transform: translateY(-120vh) rotate(var(--rot-start, -15deg)); opacity: 0; }
-  60%  { transform: translateY(10px) rotate(var(--rot-mid, 2deg)); opacity: 1; }
-  80%  { transform: translateY(-6px) rotate(var(--rot-end, -1deg)); }
-  100% { transform: translateY(0) rotate(0deg); opacity: 1; }
-}
-.puzzle-tile.falling { animation: tileFall 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+  /* Área de la manta verde — zona de trabajo */
+  #green-mat-area { position: fixed; z-index: 1; pointer-events: none; border: 2px dashed rgba(76, 175, 80, 0.35); border-radius: 8px; background: rgba(76, 175, 80, 0.06); box-shadow: inset 0 0 40px rgba(76, 175, 80, 0.08); transition: opacity 0.5s ease; }
+  #green-mat-area.hidden { opacity: 0; }
 
-/* Pieza fuera de la manta: se ve más apagada */
-.puzzle-tile.outside-mat { filter: grayscale(100%) contrast(1.1) brightness(0.85) !important; border-color: rgba(190, 155, 95, 0.15) !important; }
-.puzzle-tile.outside-mat.placed { filter: grayscale(100%) contrast(1.1) brightness(0.85) saturate(0.4) !important; }
+  /* Animación de caída desde arriba */
+  @keyframes tileFall {
+    0%   { transform: translateY(-120vh) rotate(var(--rot-start, -15deg)); opacity: 0; }
+    60%  { transform: translateY(10px) rotate(var(--rot-mid, 2deg)); opacity: 1; }
+    80%  { transform: translateY(-6px) rotate(var(--rot-end, -1deg)); }
+    100% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  }
+  .puzzle-tile.falling { animation: tileFall 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
 
+  /* Pieza fuera de la manta: se ve más apagada */
+  .puzzle-tile.outside-mat { filter: grayscale(100%) contrast(1.1) brightness(0.85) !important; border-color: rgba(190, 155, 95, 0.15) !important; }
+  .puzzle-tile.outside-mat.placed { filter: grayscale(100%) contrast(1.1) brightness(0.85) saturate(0.4) !important; }
   .mosaic-piece { display: none !important; }
 
   .menu-panel { position: fixed; top: 20px; z-index: 1000; width: 220px; background: rgba(18, 14, 10, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(190, 155, 95, 0.3); border-radius: 6px; padding: 14px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45); }
@@ -167,7 +167,9 @@
         <button class="unit-btn" data-value="Heroes" disabled>Héroes</button>
       </div>
     </div>
-  
+
+</div>
+
   <div class="menu-panel" id="menu-right">
     <div class="menu-title">Restaurar miniatura</div>
     <div class="game-instructions">Elegí facción y unidad. La imagen aparece hecha pedazos, en escala de grises — arrastrá las piezas a su lugar para revelar los colores.</div>
@@ -359,7 +361,8 @@
 
   const PUZZLE_COLS = 4, PUZZLE_ROWS = 2; // 8 piezas
   const SNAP_TOLERANCE = 42; // px de margen para que una pieza "entre" en su lugar
-function getGreenMatArea() {
+
+  function getGreenMatArea() {
   const matW = Math.min(window.innerWidth * 0.65, 900);
   const matH = Math.min(window.innerHeight * 0.6, 650);
   const x = (window.innerWidth - matW) / 2;
@@ -380,6 +383,7 @@ function updateGreenMatVisual(mat) {
   el.style.width = mat.w + 'px';
   el.style.height = mat.h + 'px';
 }
+
 function startPuzzle(faccion, unitValue, src) {
     const probe = new Image();
     probe.onload = () => {
@@ -1128,6 +1132,9 @@ function startPuzzle(faccion, unitValue, src) {
 
   initIntro();
   initMosaic();
+
+
+
 
 
 </script>
