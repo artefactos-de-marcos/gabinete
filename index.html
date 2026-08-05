@@ -11,9 +11,25 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'EB Garamond', serif; background: radial-gradient(circle at center, #1a1a1a, #000); }
+#mosaic-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; background-image: url('assets/img/construct.webp'); background-size: cover; background-position: center; background-repeat: no-repeat; }
 
-  #mosaic-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; background-image: url('assets/img/construct.webp'); background-size: cover; background-position: center; background-repeat: no-repeat; transition: opacity 0.6s ease; }
-  #mosaic-container.hidden { opacity: 0; }
+/* Área de la manta verde — zona de trabajo */
+#green-mat-area { position: fixed; z-index: 1; pointer-events: none; border: 2px dashed rgba(76, 175, 80, 0.35); border-radius: 8px; background: rgba(76, 175, 80, 0.06); box-shadow: inset 0 0 40px rgba(76, 175, 80, 0.08); transition: opacity 0.5s ease; }
+#green-mat-area.hidden { opacity: 0; }
+
+/* Animación de caída desde arriba */
+@keyframes tileFall {
+  0%   { transform: translateY(-120vh) rotate(var(--rot-start, -15deg)); opacity: 0; }
+  60%  { transform: translateY(10px) rotate(var(--rot-mid, 2deg)); opacity: 1; }
+  80%  { transform: translateY(-6px) rotate(var(--rot-end, -1deg)); }
+  100% { transform: translateY(0) rotate(0deg); opacity: 1; }
+}
+.puzzle-tile.falling { animation: tileFall 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+
+/* Pieza fuera de la manta: se ve más apagada */
+.puzzle-tile.outside-mat { filter: grayscale(100%) contrast(1.1) brightness(0.85) !important; border-color: rgba(190, 155, 95, 0.15) !important; }
+.puzzle-tile.outside-mat.placed { filter: grayscale(100%) contrast(1.1) brightness(0.85) saturate(0.4) !important; }
+
   .mosaic-piece { display: none !important; }
 
   .menu-panel { position: fixed; top: 20px; z-index: 1000; width: 220px; background: rgba(18, 14, 10, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(190, 155, 95, 0.3); border-radius: 6px; padding: 14px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45); }
@@ -151,11 +167,7 @@
         <button class="unit-btn" data-value="Heroes" disabled>Héroes</button>
       </div>
     </div>
-    <div class="units-section" style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(190,155,95,0.22);">
-      <button class="unit-btn" id="toggleBgBtn" style="width:100%; font-size:11px;">Ocultar fondo</button>
-    </div>
-</div>
-
+  
   <div class="menu-panel" id="menu-right">
     <div class="menu-title">Restaurar miniatura</div>
     <div class="game-instructions">Elegí facción y unidad. La imagen aparece hecha pedazos, en escala de grises — arrastrá las piezas a su lugar para revelar los colores.</div>
@@ -347,8 +359,28 @@
 
   const PUZZLE_COLS = 4, PUZZLE_ROWS = 2; // 8 piezas
   const SNAP_TOLERANCE = 42; // px de margen para que una pieza "entre" en su lugar
+function getGreenMatArea() {
+  const matW = Math.min(window.innerWidth * 0.65, 900);
+  const matH = Math.min(window.innerHeight * 0.6, 650);
+  const x = (window.innerWidth - matW) / 2;
+  const y = (window.innerHeight - matH) / 2 + 30;
+  return { x, y, w: matW, h: matH };
+}
 
-  function startPuzzle(faccion, unitValue, src) {
+function updateGreenMatVisual(mat) {
+  let el = document.getElementById('green-mat-area');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'green-mat-area';
+    document.body.appendChild(el);
+  }
+  el.classList.remove('hidden');
+  el.style.left = mat.x + 'px';
+  el.style.top = mat.y + 'px';
+  el.style.width = mat.w + 'px';
+  el.style.height = mat.h + 'px';
+}
+function startPuzzle(faccion, unitValue, src) {
     const probe = new Image();
     probe.onload = () => {
       const maxSize = Math.min(window.innerWidth, window.innerHeight) * 0.32;
@@ -358,6 +390,10 @@
       const centerX = window.innerWidth * 0.45, centerY = window.innerHeight * 0.5;
       const targetX = centerX - w / 2, targetY = centerY - h / 2;
       const tileW = w / PUZZLE_COLS, tileH = h / PUZZLE_ROWS;
+
+      // Dibujar / actualizar el área de la manta verde
+      const mat = getGreenMatArea();
+      updateGreenMatVisual(mat);
 
       const tiles = [];
       let placedCount = 0;
@@ -377,65 +413,106 @@
           tile.dataset.tileW = tileW;
           tile.dataset.tileH = tileH;
 
-          const scatterX = 200 + Math.random() * Math.max(100, window.innerWidth - 480);
-          const scatterY = 90 + Math.random() * Math.max(100, window.innerHeight - 260);
-          tile.style.left = scatterX + 'px'; tile.style.top = scatterY + 'px';
+          // Posición final dentro de la manta verde (dispersa)
+          const matPad = 20;
+          const destX = mat.x + matPad + Math.random() * (mat.w - tileW - matPad * 2);
+          const destY = mat.y + matPad + Math.random() * (mat.h - tileH - matPad * 2);
+
+          // Colocamos la pieza en su destino pero la movemos arriba con translateY para la animación
+          tile.style.left = destX + 'px';
+          tile.style.top = destY + 'px';
+          tile.style.transform = 'translateY(-120vh)';
+          tile.style.opacity = '0';
+
+          // Rotaciones aleatorias para la caída
+          tile.style.setProperty('--rot-start', (Math.random() * 30 - 15) + 'deg');
+          tile.style.setProperty('--rot-mid', (Math.random() * 10 - 5) + 'deg');
+          tile.style.setProperty('--rot-end', (Math.random() * 6 - 3) + 'deg');
 
           document.body.appendChild(tile);
           topZIndex++; tile.style.zIndex = topZIndex;
 
+          // Disparar la caída con delay escalonado
+          const delay = (row * PUZZLE_COLS + col) * 80;
+          setTimeout(() => {
+            tile.classList.add('falling');
+            setTimeout(() => tile.classList.remove('falling'), 950);
+          }, delay);
+
           makeTileDraggable(tile, () => {
             const curLeft = parseFloat(tile.style.left), curTop = parseFloat(tile.style.top);
+            const matArea = getGreenMatArea();
+            const insideMat = curLeft >= matArea.x && curLeft + tileW <= matArea.x + matArea.w &&
+                              curTop >= matArea.y && curTop + tileH <= matArea.y + matArea.h;
+
+            tile.classList.toggle('outside-mat', !insideMat);
+
             let snapped = false;
 
-            for (const other of tiles) {
-              if (other === tile || !other.dataset.placed) continue;
-              const otherLeft = parseFloat(other.style.left), otherTop = parseFloat(other.style.top);
-              const dCol = parseInt(tile.dataset.col) - parseInt(other.dataset.col);
-              const dRow = parseInt(tile.dataset.row) - parseInt(other.dataset.row);
-              const expectedLeft = otherLeft + dCol * tileW;
-              const expectedTop = otherTop + dRow * tileH;
-              const dist = Math.hypot(curLeft - expectedLeft, curTop - expectedTop);
-              if (dist < SNAP_TOLERANCE) {
-                tile.style.transition = 'left 0.2s ease, top 0.2s ease';
-                tile.style.left = expectedLeft + 'px'; tile.style.top = expectedTop + 'px';
-                tile.classList.add('placed');
-                tile.dataset.placed = 'true';
-                placedCount++;
-                snapped = true;
-                const groupId = other.dataset.groupId;
-                if (groupId) {
-                  tile.dataset.groupId = groupId;
-                  const g = puzzleGroups.find(x => x.id == groupId);
-                  if (g) g.pieces.push(tile);
-                } else {
-                  const newG = { id: nextGroupId++, pieces: [other, tile] };
-                  other.dataset.groupId = newG.id;
-                  tile.dataset.groupId = newG.id;
-                  puzzleGroups.push(newG);
+            // Solo se permite unir si estamos sobre la manta verde
+            if (insideMat) {
+              for (const other of tiles) {
+                if (other === tile || !other.dataset.placed) continue;
+                const otherLeft = parseFloat(other.style.left), otherTop = parseFloat(other.style.top);
+                const dCol = parseInt(tile.dataset.col) - parseInt(other.dataset.col);
+                const dRow = parseInt(tile.dataset.row) - parseInt(other.dataset.row);
+                const expectedLeft = otherLeft + dCol * tileW;
+                const expectedTop = otherTop + dRow * tileH;
+                const dist = Math.hypot(curLeft - expectedLeft, curTop - expectedTop);
+                if (dist < SNAP_TOLERANCE) {
+                  tile.style.transition = 'left 0.2s ease, top 0.2s ease';
+                  tile.style.left = expectedLeft + 'px'; tile.style.top = expectedTop + 'px';
+                  tile.classList.add('placed');
+                  tile.dataset.placed = 'true';
+                  placedCount++;
+                  snapped = true;
+                  const groupId = other.dataset.groupId;
+                  if (groupId) {
+                    tile.dataset.groupId = groupId;
+                    const g = puzzleGroups.find(x => x.id == groupId);
+                    if (g) g.pieces.push(tile);
+                  } else {
+                    const newG = { id: nextGroupId++, pieces: [other, tile] };
+                    other.dataset.groupId = newG.id;
+                    tile.dataset.groupId = newG.id;
+                    puzzleGroups.push(newG);
+                  }
+                  break;
                 }
-                break;
+              }
+
+              if (!snapped) {
+                const myRow = parseInt(tile.dataset.row), myCol = parseInt(tile.dataset.col);
+                const absLeft = targetX + myCol * tileW, absTop = targetY + myRow * tileH;
+                const distAbs = Math.hypot(curLeft - absLeft, curTop - absTop);
+                if (distAbs < SNAP_TOLERANCE) {
+                  tile.style.transition = 'left 0.2s ease, top 0.2s ease';
+                  tile.style.left = absLeft + 'px'; tile.style.top = absTop + 'px';
+                  tile.classList.add('placed');
+                  tile.dataset.placed = 'true';
+                  placedCount++;
+                  snapped = true;
+                }
               }
             }
 
-            if (!snapped) {
-              const myRow = parseInt(tile.dataset.row), myCol = parseInt(tile.dataset.col);
-              const absLeft = targetX + myCol * tileW, absTop = targetY + myRow * tileH;
-              const distAbs = Math.hypot(curLeft - absLeft, curTop - absTop);
-              if (distAbs < SNAP_TOLERANCE) {
-                tile.style.transition = 'left 0.2s ease, top 0.2s ease';
-                tile.style.left = absLeft + 'px'; tile.style.top = absTop + 'px';
-                tile.classList.add('placed');
-                tile.dataset.placed = 'true';
-                placedCount++;
-                snapped = true;
-              }
+            // Si se suelta fuera de la manta, rebota adentro
+            if (!snapped && !insideMat) {
+              const pad = 20;
+              const safeX = matArea.x + pad + Math.random() * (matArea.w - tileW - pad * 2);
+              const safeY = matArea.y + pad + Math.random() * (matArea.h - tileH - pad * 2);
+              tile.style.transition = 'left 0.5s ease, top 0.5s ease';
+              tile.style.left = safeX + 'px';
+              tile.style.top = safeY + 'px';
+              tile.classList.remove('outside-mat');
             }
 
             gameStatus.textContent = `Piezas colocadas: ${placedCount}/${PUZZLE_COLS * PUZZLE_ROWS}`;
             if (placedCount === PUZZLE_COLS * PUZZLE_ROWS) {
               setTimeout(() => {
                 tiles.forEach(t => t.remove());
+                const matEl = document.getElementById('green-mat-area');
+                if (matEl) matEl.classList.add('hidden');
                 finishPuzzle(unitValue, src, targetX, targetY, w, h);
               }, 250);
             }
@@ -1052,17 +1129,6 @@
   initIntro();
   initMosaic();
 
-
-
-  // Toggle fondo construct.webp
-  const bgToggleBtn = document.getElementById('toggleBgBtn');
-  const mosaicContainer = document.getElementById('mosaic-container');
-  if (bgToggleBtn && mosaicContainer) {
-    bgToggleBtn.addEventListener('click', () => {
-      const hidden = mosaicContainer.classList.toggle('hidden');
-      bgToggleBtn.textContent = hidden ? 'Mostrar fondo' : 'Ocultar fondo';
-    });
-  }
 
 </script>
 </body>
