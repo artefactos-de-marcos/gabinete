@@ -12,8 +12,9 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'EB Garamond', serif; background: radial-gradient(circle at center, #1a1a1a, #000); }
 
-  #mosaic-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
-  .mosaic-piece { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #3e2723; background-image: url('assets/img/construct.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; opacity: 0; transform: scale(1.05); transition: opacity 1.2s ease-in-out, transform 1.2s ease-in-out; box-shadow: inset 0 0 40px rgba(212, 175, 106, 0.4); }
+  #mosaic-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; background-image: url('assets/img/construct.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; transition: opacity 0.6s ease; }
+  #mosaic-container.hidden { opacity: 0; }
+  .mosaic-piece { display: none !important; }
 
   .menu-panel { position: fixed; top: 20px; z-index: 1000; width: 220px; background: rgba(18, 14, 10, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(190, 155, 95, 0.3); border-radius: 6px; padding: 14px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45); }
   #menu-left { left: 20px; }
@@ -116,7 +117,7 @@
 <body>
 
   <div id="introScreen">
-    <img id="introBgImg" src="assets/img/intro_static.npg" alt="">
+    <img id="introBgImg" src="assets/img/intro_static.png" alt="">
     <div id="introContent">
       <h1 id="introTitle">GABINETE DE MINIATURAS</h1>
       <button id="introStartBtn">Empezar</button>
@@ -150,7 +151,10 @@
         <button class="unit-btn" data-value="Heroes" disabled>Héroes</button>
       </div>
     </div>
-  </div>
+    <div class="units-section" style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(190,155,95,0.22);">
+      <button class="unit-btn" id="toggleBgBtn" style="width:100%; font-size:11px;">Ocultar fondo</button>
+    </div>
+</div>
 
   <div class="menu-panel" id="menu-right">
     <div class="menu-title">Restaurar miniatura</div>
@@ -357,6 +361,8 @@
 
       const tiles = [];
       let placedCount = 0;
+      const puzzleGroups = [];
+      let nextGroupId = 1;
 
       for (let row = 0; row < PUZZLE_ROWS; row++) {
         for (let col = 0; col < PUZZLE_COLS; col++) {
@@ -366,31 +372,72 @@
           tile.style.backgroundImage = `url(${src})`;
           tile.style.backgroundSize = `${w}px ${h}px`;
           tile.style.backgroundPosition = `-${col * tileW}px -${row * tileH}px`;
+          tile.dataset.row = row;
+          tile.dataset.col = col;
+          tile.dataset.tileW = tileW;
+          tile.dataset.tileH = tileH;
 
           const scatterX = 200 + Math.random() * Math.max(100, window.innerWidth - 480);
           const scatterY = 90 + Math.random() * Math.max(100, window.innerHeight - 260);
           tile.style.left = scatterX + 'px'; tile.style.top = scatterY + 'px';
 
-          const targetLeft = targetX + col * tileW, targetTop = targetY + row * tileH;
           document.body.appendChild(tile);
           topZIndex++; tile.style.zIndex = topZIndex;
 
           makeTileDraggable(tile, () => {
             const curLeft = parseFloat(tile.style.left), curTop = parseFloat(tile.style.top);
-            const dist = Math.hypot(curLeft - targetLeft, curTop - targetTop);
-            if (dist < SNAP_TOLERANCE) {
-              tile.style.transition = 'left 0.2s ease, top 0.2s ease';
-              tile.style.left = targetLeft + 'px'; tile.style.top = targetTop + 'px';
-              tile.classList.add('placed');
-              tile.dataset.placed = 'true';
-              placedCount++;
-              gameStatus.textContent = `Piezas colocadas: ${placedCount}/${PUZZLE_COLS * PUZZLE_ROWS}`;
-              if (placedCount === PUZZLE_COLS * PUZZLE_ROWS) {
-                setTimeout(() => {
-                  tiles.forEach(t => t.remove());
-                  finishPuzzle(unitValue, src, targetX, targetY, w, h);
-                }, 250);
+            let snapped = false;
+
+            for (const other of tiles) {
+              if (other === tile || !other.dataset.placed) continue;
+              const otherLeft = parseFloat(other.style.left), otherTop = parseFloat(other.style.top);
+              const dCol = parseInt(tile.dataset.col) - parseInt(other.dataset.col);
+              const dRow = parseInt(tile.dataset.row) - parseInt(other.dataset.row);
+              const expectedLeft = otherLeft + dCol * tileW;
+              const expectedTop = otherTop + dRow * tileH;
+              const dist = Math.hypot(curLeft - expectedLeft, curTop - expectedTop);
+              if (dist < SNAP_TOLERANCE) {
+                tile.style.transition = 'left 0.2s ease, top 0.2s ease';
+                tile.style.left = expectedLeft + 'px'; tile.style.top = expectedTop + 'px';
+                tile.classList.add('placed');
+                tile.dataset.placed = 'true';
+                placedCount++;
+                snapped = true;
+                const groupId = other.dataset.groupId;
+                if (groupId) {
+                  tile.dataset.groupId = groupId;
+                  const g = puzzleGroups.find(x => x.id == groupId);
+                  if (g) g.pieces.push(tile);
+                } else {
+                  const newG = { id: nextGroupId++, pieces: [other, tile] };
+                  other.dataset.groupId = newG.id;
+                  tile.dataset.groupId = newG.id;
+                  puzzleGroups.push(newG);
+                }
+                break;
               }
+            }
+
+            if (!snapped) {
+              const myRow = parseInt(tile.dataset.row), myCol = parseInt(tile.dataset.col);
+              const absLeft = targetX + myCol * tileW, absTop = targetY + myRow * tileH;
+              const distAbs = Math.hypot(curLeft - absLeft, curTop - absTop);
+              if (distAbs < SNAP_TOLERANCE) {
+                tile.style.transition = 'left 0.2s ease, top 0.2s ease';
+                tile.style.left = absLeft + 'px'; tile.style.top = absTop + 'px';
+                tile.classList.add('placed');
+                tile.dataset.placed = 'true';
+                placedCount++;
+                snapped = true;
+              }
+            }
+
+            gameStatus.textContent = `Piezas colocadas: ${placedCount}/${PUZZLE_COLS * PUZZLE_ROWS}`;
+            if (placedCount === PUZZLE_COLS * PUZZLE_ROWS) {
+              setTimeout(() => {
+                tiles.forEach(t => t.remove());
+                finishPuzzle(unitValue, src, targetX, targetY, w, h);
+              }, 250);
             }
           });
           tiles.push(tile);
@@ -412,24 +459,48 @@
   // Arrastre simple para una pieza del rompecabezas: al soltar, avisa por onRelease si quedó cerca de su lugar.
   function makeTileDraggable(tile, onRelease) {
     let isDragging = false, startX, startY, initialLeft, initialTop;
+    let draggedGroup = null;
+
     function getPoint(e) { if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX, y: e.touches[0].clientY }; return { x: e.clientX, y: e.clientY }; }
+
+    function getGroupPieces(masterEl) {
+      const gid = masterEl.dataset.groupId;
+      if (!gid) return [{ el: masterEl, offX: 0, offY: 0 }];
+      const all = document.querySelectorAll('.puzzle-tile[data-group-id="' + gid + '"]');
+      const masterLeft = parseFloat(masterEl.style.left);
+      const masterTop = parseFloat(masterEl.style.top);
+      return Array.from(all).map(p => ({
+        el: p,
+        offX: parseFloat(p.style.left) - masterLeft,
+        offY: parseFloat(p.style.top) - masterTop
+      }));
+    }
+
     function onStart(e) {
-      if (tile.dataset.placed === 'true') return;
+      if (tile.dataset.placed === 'true' && !tile.dataset.groupId) return;
       isDragging = true; tile.classList.add('dragging'); tile.style.transition = 'none';
       topZIndex++; tile.style.zIndex = topZIndex;
       const pt = getPoint(e); startX = pt.x; startY = pt.y;
       initialLeft = parseFloat(tile.style.left) || 0; initialTop = parseFloat(tile.style.top) || 0;
+      draggedGroup = getGroupPieces(tile);
+      draggedGroup.forEach(p => { p.el.style.zIndex = topZIndex; });
       e.preventDefault();
     }
     function onMove(e) {
       if (!isDragging) return; const pt = getPoint(e);
-      tile.style.left = (initialLeft + pt.x - startX) + 'px'; tile.style.top = (initialTop + pt.y - startY) + 'px'; e.preventDefault();
+      const dx = pt.x - startX, dy = pt.y - startY;
+      draggedGroup.forEach(p => {
+        p.el.style.left = (initialLeft + p.offX + dx) + 'px';
+        p.el.style.top = (initialTop + p.offY + dy) + 'px';
+      });
+      e.preventDefault();
     }
     function onEnd() {
       if (!isDragging) return;
       isDragging = false; tile.classList.remove('dragging');
       window.removeEventListener('mousemove', onMove); window.removeEventListener('touchmove', onMove);
       window.removeEventListener('mouseup', onEnd); window.removeEventListener('touchend', onEnd);
+      draggedGroup = null;
       onRelease();
     }
     tile.addEventListener('mousedown', onStart); tile.addEventListener('touchstart', onStart, { passive: false });
@@ -573,56 +644,20 @@
   }
 
   function buildRoom(targetScene) {
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x5a4632, roughness: 0.85 });
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load('assets/img/cuarto.png', (texture) => {
+      texture.mapping = THREE.EquirectangularReflectionMapping;
+      targetScene.background = texture;
+    }, undefined, (err) => {
+      console.error('Error cargando cuarto.png:', err);
+      targetScene.background = new THREE.Color(0x1a1410);
+    });
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x2a2018, roughness: 0.9 });
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 24), floorMat);
     floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -0.01;
     floor.receiveShadow = true;
     targetScene.add(floor);
-
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0x8a7a63, roughness: 0.95 });
-    const wallH = 9;
-
-    const backWall = new THREE.Mesh(new THREE.BoxGeometry(30, wallH, 0.3), wallMat);
-    backWall.position.set(0, wallH / 2, -9);
-    backWall.receiveShadow = true;
-    targetScene.add(backWall);
-
-    // Ventana en la pared de fondo, con luz propia entrando.
-    const frameMat = new THREE.MeshStandardMaterial({ color: 0x3d2817 });
-    const winFrame = new THREE.Mesh(new THREE.BoxGeometry(3.2, 3.6, 0.35), frameMat);
-    winFrame.position.set(7, 5.5, -8.95);
-    targetScene.add(winFrame);
-    const glass = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 3.2), new THREE.MeshStandardMaterial({ color: 0xbcd4e8, transparent: true, opacity: 0.35, emissive: 0x1a2530, emissiveIntensity: 0.4 }));
-    glass.position.set(7, 5.5, -8.75);
-    targetScene.add(glass);
-    const muntinV = new THREE.Mesh(new THREE.BoxGeometry(0.08, 3.2, 0.1), frameMat); muntinV.position.set(7, 5.5, -8.7); targetScene.add(muntinV);
-    const muntinH = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.08, 0.1), frameMat); muntinH.position.set(7, 5.5, -8.7); targetScene.add(muntinH);
-    const windowLight = new THREE.PointLight(0xdce8ff, 1.2, 20);
-    windowLight.position.set(7, 5.5, -7.5);
-    targetScene.add(windowLight);
-
-    // Pared lateral izquierda con puerta.
-    const sideWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, wallH, 18), wallMat);
-    sideWall.position.set(-14, wallH / 2, 0);
-    sideWall.receiveShadow = true;
-    targetScene.add(sideWall);
-
-    const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.4, 4.2, 2.2), frameMat);
-    doorFrame.position.set(-13.85, 2.1, 4);
-    targetScene.add(doorFrame);
-    const door = new THREE.Mesh(new THREE.BoxGeometry(0.15, 3.9, 1.9), new THREE.MeshStandardMaterial({ color: 0x5a3a22, roughness: 0.7 }));
-    door.position.set(-13.7, 2.0, 4);
-    targetScene.add(door);
-    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), new THREE.MeshStandardMaterial({ color: 0xc9a227, metalness: 0.6, roughness: 0.3 }));
-    knob.position.set(-13.6, 2.0, 3.3);
-    targetScene.add(knob);
-
-    // Mobiliario: son parte fija de la habitación, no objetos arrastrables del gabinete.
-    targetScene.add(buildBed(-9, 0, -3));
-    targetScene.add(buildChair(6, 0, 3.5, Math.PI));
-    targetScene.add(buildChair(8.5, 0, 3, Math.PI * 0.8));
-
-    targetScene.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
   }
 
   function settleOnShelf(obj, shelfIdx) {
@@ -1016,6 +1051,18 @@
 
   initIntro();
   initMosaic();
+
+
+
+  // Toggle fondo construct.jpg
+  const bgToggleBtn = document.getElementById('toggleBgBtn');
+  const mosaicContainer = document.getElementById('mosaic-container');
+  if (bgToggleBtn && mosaicContainer) {
+    bgToggleBtn.addEventListener('click', () => {
+      const hidden = mosaicContainer.classList.toggle('hidden');
+      bgToggleBtn.textContent = hidden ? 'Mostrar fondo' : 'Ocultar fondo';
+    });
+  }
 
 </script>
 </body>
