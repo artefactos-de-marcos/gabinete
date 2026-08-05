@@ -119,7 +119,7 @@
 <body>
 
   <div id="introScreen">
-    <img id="introBgImg" src="assets/img/intro_static.jpg" alt="">
+    <img id="introBgImg" src="assets/img/introstatic.webp" alt="">
     <div id="introContent">
       <h1 id="introTitle">GABINETE DE MINIATURAS</h1>
       <button id="introStartBtn">Empezar</button>
@@ -560,7 +560,7 @@
   // Entorno del gabinete: una imagen panorámica equirectangular en vez de una habitación con
   // objetos. ROOM_EQUIRECT_URL: pendiente — falta que subas assets/img/cuarto.webp al repo (o
   // me lo pases directo) para embeberlo; mientras tanto no hay imagen y el fondo queda vacío.
-  const ROOM_EQUIRECT_URL = ''; // TODO: reemplazar por el data URI de cuarto.webp
+  const ROOM_EQUIRECT_URL = 'assets/img/cuarto.webp'; // TODO: reemplazar por el data URI de cuarto.webp
 
   function buildRoomEnvironment(targetScene) {
     if (!ROOM_EQUIRECT_URL) return;
